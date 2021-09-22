@@ -1,0 +1,94 @@
+---
+- name: Download and install QMGtool 
+  hosts: all
+  gather_facts: yes
+  
+  collections:
+    - ibm.power_ibmi
+  
+  vars:
+    remote_lib_name: "QGPL"
+    saved_lib: "QMGTOOLS"
+    system_value: "QALWOBJRST"
+
+  tasks:
+    - name: Download qmgtool file
+      import_role:
+        name: download_qmgtool
+
+    - name: Copy qmgtool file to IBM i LPARs
+      ibm.power_ibmi.ibmi_copy:
+        src: "{{ local_file_dir }}/{{ qmgtool_file_name }}.savf"
+        lib_name: "{{ remote_lib_name }}" 
+        force: True
+      when:
+        - ansible_distribution == "OS400" 
+
+    - name: Check system value for {{ system_value }}
+      ibm.power_ibmi.ibmi_sysval:
+        sysvalue:
+          - {'name':"{{ system_value }}", 'expect':'*ALL'}
+      ignore_errors: true
+      register: check_sys_value
+
+    - debug:
+        var: check_sys_value
+        verbosity: 1
+
+    - name: Change system value for {{ system_value }} to *ALL
+      ibm.power_ibmi.ibmi_cl_command:
+        cmd: 'chgsysval "{{ system_value }}" *ALL'
+      when:
+        - check_sys_value.rc != 0 
+      register: change_sys_value_new
+ 
+    - debug:
+        var: change_sys_value_new
+        verbosity: 1
+
+    - name: Restore saved Library
+      ibm.power_ibmi.ibmi_lib_restore:
+        saved_lib: "{{ saved_lib }}" 
+        savefile_name: "{{ qmgtool_file_name }}"
+        savefile_lib: "{{ remote_lib_name }}"
+        parameters: 'MBROPT(*ALL) ALWOBJDIF(*ALL)'
+      when:
+        - ansible_distribution == "OS400"
+      register: restore_saved_library_results
+
+    - name: Change system value for {{ system_value }} to original value 
+      ibm.power_ibmi.ibmi_cl_command:
+        cmd: "chgsysval sysval({{ system_value }}) value('{{ check_sys_value.fail_list[0].value }}')"
+      when:
+        - check_sys_value.rc != 0
+      register: change_sys_value_orig
+
+    - debug:
+        var: change_sys_value_orig
+        verbosity: 1
+
+    - block:
+        - ibm.power_ibmi.ibmi_cl_command:
+            cmd: 'dltf {{ remote_lib_name }}/{{ qmgtool_file_name }}'
+          register: remove_savf_file
+        - debug:
+            var: remove_savf_file
+      when:
+        - restore_saved_library_results.rc == 0
+
+    - name: email results of library restore
+      mail: 
+        host: blue.aixncc.uk.ibm.com
+        port: 25
+        to:
+          - Peter Kask <peter.kask@handelsbanken.se>
+          - James Kemp <jake02@handelsbanken.se>
+          - Stuart Cunliffe <s_cunliffe@uk.ibm.com>
+          - Monti Abrahams <monti@za.ibm.com>
+        from: root@lab-awx-30.labs.uk.ibm.com (AWX host 30 - London)
+        subject: Ansible report for library restore {{ qmgtool_file_name }} 
+        body: |
+          ===========================================
+          Output from library restore:
+          {{ restore_saved_library_results }}
+      delegate_to: localhost

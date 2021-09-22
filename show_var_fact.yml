@@ -1,0 +1,23 @@
+---
+- name: show the difference between vars and facts
+  hosts: localhost
+  gather_facts: no
+  
+  vars:
+    time_var: "{{lookup('pipe', 'date \"+%H:%M:%S\"')}}"
+ 
+  tasks:
+    - set_fact:
+        time_fact: "{{lookup('pipe', 'date \"+%H:%M:%S\"')}}"
+    - debug:
+        msg: "Fact time is : {{ time_fact }}"
+    - debug:
+        msg: "Variable time is : {{ time_var }}"
+
+    - command: sleep 5
+
+    - debug:
+        msg: "Fact time is : {{ time_fact }}"
+    - debug:
+        msg: "Variable time is : {{ time_var }}"
+

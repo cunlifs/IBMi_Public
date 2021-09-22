@@ -1,0 +1,48 @@
+---
+- name: collect ibmi facts
+  hosts: all
+  gather_facts: yes
+  
+  collections:
+    - ibm.power_ibmi
+
+  tasks:
+    - name: gather ibmi system facts
+      ibmi_facts:
+
+    - debug:
+#       msg: "{{ ansible_facts.system_info | to_nice_json }}"
+        msg: "{{ ansible_facts.system_status | to_nice_json }}"
+        verbosity: 1
+
+    - name: Set fact output variable
+      set_fact:
+         fact_output: "{{ fact_output | default('') + item + '\n' }}"
+      with_items: "{{ ansible_facts }}"
+
+    - name: Copy facts to file
+      local_action: copy content={{ fact_output }} dest=./ibmi_facts.{{ ansible_hostname }}
+
+    - name: 
+      set_fact: 
+        ibmi_facts:
+           hostname: "{{ansible_host}}"
+           system_name: "{{ system_name }}"
+           serial_number: "{{ system_values.QSRLNBR }}"
+           model_id: "{{ system_values.QMODEL}}"
+           cpu_type: "tbd"
+           cpu_speed: "tbd"
+           cpu_physical: "{{ system_status.CURRENT_CPU_CAPACITY }}"
+           cpu_virtual: "{{ system_info.TOTAL_CPUS }}"
+           memory: "{{ system_info.CONFIGURED_MEMORY }}"
+           main_storage: "{{ system_status.MAIN_STORAGE_SIZE }}"
+           aux_storage: "{{ system_status.TOTAL_AUXILIARY_STORAGE }}"     
+           system_date_time: "{{ system_values.QDATETIME }}"
+           os_name: "{{ system_info.OS_NAME }}"
+           os_family: "{{ ansible_os_family }}"
+           os_version: "{{ system_info.OS_VERSION }}.{{ system_info.OS_RELEASE }}"
+           
+    - name: Show selected ibmi_facts
+      debug : 
+        msg: "{{ ibmi_facts }}" 
+

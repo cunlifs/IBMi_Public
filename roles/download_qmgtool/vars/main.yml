@@ -1,0 +1,7 @@
+---
+# vars file for download_qmgtool
+http_source: "https://public.dhe.ibm.com/services/us/igsc/has"
+qmgtool_file_v740: "qmgtool740.savf"
+qmgtool_file_v730: "qmgtool730.savf"
+qmgtool_file_v720: "qmgtool720.savf"
+local_file_dir: "/tmp"

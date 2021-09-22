@@ -1,0 +1,11 @@
+---
+- name: show files contents
+  hosts: localhost
+  gather_facts: yes
+  
+  vars:
+    file_contents: "{{ lookup('file', '/etc/hosts') }}"
+
+  tasks:
+    - name: Show contents
+      debug: msg={{ file_contents }}

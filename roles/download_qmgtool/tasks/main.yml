@@ -1,0 +1,23 @@
+---
+# tasks file for download_qmgtool
+- name: Download {{ qmgtool_file_v740 }} from {{ http_source }}
+  get_url:
+     url: "{{ http_source }}/{{ qmgtool_file_v740 }}"
+     dest: "{{ local_file_dir }}/{{ qmgtool_file_v740 }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Download {{ qmgtool_file_v730 }} from {{ http_source }}
+  get_url:
+    url: "{{ http_source }}/{{ qmgtool_file_v730 }}"
+    dest: "{{ local_file_dir }}/{{ qmgtool_file_v730 }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Set version related filename
+  set_fact:
+    qmgtool_file_name: 'qmgtool{{ansible_distribution_version}}{{ansible_distribution_release}}0'
+
+- debug:
+    var: qmgtool_file_name
+    verbosity: 1
